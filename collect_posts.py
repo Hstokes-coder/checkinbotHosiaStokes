@@ -58,36 +58,69 @@ def resolve_filename(attachment, response):
       1. attachment["filename"], if the API includes it directly
       2. the filename in the response's Content-Disposition header
       3. the last path segment of the download URL
-      4. a fallback built from the attachment's id
+      4. the literal string "attachment", if nothing else is usable
+ 
+    Whatever name we land on is then prefixed with the attachment's
+    own id (e.g. "42_syllabus.pdf"). Attachment ids are unique, so
+    this is what actually prevents two different attachments that
+    happen to share a plain filename - like two separate posts each
+    attaching a file called "syllabus.pdf" - from overwriting each
+    other in artifact/files/. It also keeps re-downloads idempotent:
+    the same attachment always resolves to the exact same id-prefixed
+    name, so downloading it again on a later scheduled run overwrites
+    its own file instead of creating a new one.
     """
     if attachment.get("filename"):
-        return safe_filename(attachment["filename"])
+        base = safe_filename(attachment["filename"])
+    else:
+        content_disposition = response.headers.get("Content-Disposition", "")
+        match = re.search(r'filename="?([^";]+)"?', content_disposition)
+        if match:
+            base = safe_filename(match.group(1))
+        else:
+            url_path = urlparse(attachment["download_url"]).path
+            tail = Path(url_path).name
+            base = safe_filename(tail) if tail else "attachment"
  
-    content_disposition = response.headers.get("Content-Disposition", "")
-    match = re.search(r'filename="?([^";]+)"?', content_disposition)
-    if match:
-        return safe_filename(match.group(1))
- 
-    url_path = urlparse(attachment["download_url"]).path
-    tail = Path(url_path).name
-    if tail:
-        return safe_filename(tail)
- 
-    return safe_filename(f"attachment_{attachment.get('id', 'unknown')}")
+    attachment_id = attachment.get("id")
+    if attachment_id is None:
+        return base
+    return f"{attachment_id}_{base}"
  
  
-def collect_attachments(client, post, files_dir):
+def collect_attachments(client, post, files_dir, used_filenames):
     """
     Download every attachment listed on one post.
  
     Returns a list of attachment records: each is the original
     attachment data from the API, plus a "local_path" key pointing at
     where we saved the file. Called once per post from main().
+ 
+    used_filenames is a set shared across every post processed in
+    this run of the script. resolve_filename()'s id prefix should
+    already make two different attachments landing on the same
+    filename essentially impossible, but if it ever did happen anyway,
+    a numeric suffix (_2, _3, ...) is appended here so the second
+    attachment can never silently overwrite the first. This set is
+    NOT compared against files already sitting on disk from earlier
+    scheduled runs - only against names already used earlier in this
+    same run - so re-downloading the same attachment on the next run
+    still reuses its existing path instead of growing a new suffix
+    every 15 minutes.
     """
     saved = []
     for attachment in post.get("attachments", []):
         response = client.download_attachment(attachment["download_url"])
         filename = resolve_filename(attachment, response)
+ 
+        if filename in used_filenames:
+            stem = Path(filename).stem
+            suffix = Path(filename).suffix
+            counter = 2
+            while f"{stem}_{counter}{suffix}" in used_filenames:
+                counter += 1
+            filename = f"{stem}_{counter}{suffix}"
+        used_filenames.add(filename)
  
         local_path = files_dir / filename
         local_path.write_bytes(response.content)
@@ -107,8 +140,9 @@ def main():
     client = PracticeHubClient(API_URL, API_TOKEN)
  
     collected = []
+    used_filenames = set()
     for post in client.list_all_posts(author=INSTRUCTOR_ID):
-        attachments = collect_attachments(client, post, FILES_DIR)
+        attachments = collect_attachments(client, post, FILES_DIR, used_filenames)
  
         collected.append({
             "id": post.get("id"),
