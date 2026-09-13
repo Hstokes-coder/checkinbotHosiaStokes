@@ -16,7 +16,48 @@ This class only knows how to talk to the API:
 Task-specific logic lives in other files such as collect_posts.py.
 """
 
+import os
 import requests
+
+
+def load_config():
+    """
+    Read and validate PRACTICE_API_URL, PRACTICE_API_TOKEN, and
+    INSTRUCTOR_ID from the environment.
+
+    Both collect_posts.py and checkin_bot.py need the same three
+    values, so this lives here once instead of being copy-pasted into
+    each script. Raises a RuntimeError with a specific, actionable
+    message the moment something is missing or malformed, instead of
+    letting a bare os.environ[...] raise a raw KeyError (or int(...)
+    raise a raw ValueError) partway through the program.
+
+    Returns (api_url, api_token, instructor_id).
+    """
+    api_url = os.environ.get("PRACTICE_API_URL", "").strip()
+    if not api_url:
+        raise RuntimeError(
+            "PRACTICE_API_URL is not set. Copy .env.example to .env and "
+            "fill in your values (or set it as a GitHub Actions secret)."
+        )
+
+    api_token = os.environ.get("PRACTICE_API_TOKEN", "").strip()
+    if not api_token:
+        raise RuntimeError(
+            "PRACTICE_API_TOKEN is not set. Copy .env.example to .env and "
+            "fill in your values (or set it as a GitHub Actions secret)."
+        )
+
+    raw_instructor_id = os.environ.get("INSTRUCTOR_ID", "7").strip()
+    try:
+        instructor_id = int(raw_instructor_id)
+    except ValueError:
+        raise RuntimeError(
+            "INSTRUCTOR_ID must be a whole number, got "
+            f"{raw_instructor_id!r} instead."
+        ) from None
+
+    return api_url, api_token, instructor_id
 
 
 class PracticeHubClient:

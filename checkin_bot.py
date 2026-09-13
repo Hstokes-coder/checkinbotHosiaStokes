@@ -18,13 +18,11 @@ import os
 
 from dotenv import load_dotenv
 
-from practice_hub_client import PracticeHubClient
+from practice_hub_client import PracticeHubClient, load_config
 
 load_dotenv()
 
-API_URL = os.environ["PRACTICE_API_URL"]
-API_TOKEN = os.environ["PRACTICE_API_TOKEN"]
-INSTRUCTOR_ID = int(os.environ.get("INSTRUCTOR_ID", "7"))
+API_URL, API_TOKEN, INSTRUCTOR_ID = load_config()
 
 # The comment the bot will post for an open check-in.
 REPLY_BODY = "Checked in."

@@ -23,16 +23,14 @@ from urllib.parse import urlparse
  
 from dotenv import load_dotenv
  
-from practice_hub_client import PracticeHubClient
+from practice_hub_client import PracticeHubClient, load_config
  
 # Loads variables from a local .env file into os.environ, if one
 # exists. In GitHub Actions there is no .env file - the secrets/vars
 # are already in the environment - so this line is simply a no-op there.
 load_dotenv()
  
-API_URL = os.environ["PRACTICE_API_URL"]
-API_TOKEN = os.environ["PRACTICE_API_TOKEN"]
-INSTRUCTOR_ID = int(os.environ.get("INSTRUCTOR_ID", "7"))
+API_URL, API_TOKEN, INSTRUCTOR_ID = load_config()
  
 ARTIFACT_DIR = Path("artifact")
 FILES_DIR = ARTIFACT_DIR / "files"
