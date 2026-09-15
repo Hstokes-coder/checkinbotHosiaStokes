@@ -2,7 +2,7 @@ name: Scheduled Check-In Bot
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 14 * * *"
   workflow_dispatch:
 
 permissions:
@@ -18,7 +18,7 @@ jobs:
 
     env:
       PRACTICE_API_TOKEN: ${{ secrets.PRACTICE_API_TOKEN }}
-      PRACTICE_API_URL: ${{ secrets.PRACTICE_API_URL }}
+      PRACTICE_API_URL: ${{ vars.PRACTICE_API_URL }}
       INSTRUCTOR_ID: ${{ vars.INSTRUCTOR_ID }}
 
     steps:

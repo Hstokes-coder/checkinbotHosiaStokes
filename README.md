@@ -14,6 +14,12 @@ a schedule:
 - `checkin_bot.py` (Task 2) finds instructor posts titled as a check-in and
   replies to each one exactly once.
 
+Graded check-ins run September 16-27, each valid only on its own Central
+Time date (the September 15 check-in is just for testing). The bot never
+hard-codes any of those dates - it relies on the API's own data and on
+handling `423 Locked` responses (see below) so it keeps working correctly
+for new check-ins without needing code changes every day.
+
 ## How to Run
 
 Both scripts are meant to be run from Terminal, from inside this project
@@ -113,18 +119,33 @@ does not need to run before Task 2.
 
 `.github/workflows/checkin-bot.yml` defines the automation:
 
-- **Triggers:** a `schedule` cron of `*/15 * * * *` (every 15 minutes, in
-  UTC) plus `workflow_dispatch` for running it manually from the Actions tab.
-- **Credentials:** `PRACTICE_API_TOKEN` and `PRACTICE_API_URL` come from the
-  repository's encrypted **Secrets**; `INSTRUCTOR_ID` comes from the
-  repository's (non-encrypted) **Variables**. None of these values are
-  stored in this repo's code.
+- **Triggers:** a `schedule` cron of `0 14 * * *` (once a day at 14:00 UTC,
+  which is 9:00 AM Central Daylight Time / 8:00 AM Central Standard Time)
+  plus `workflow_dispatch` for running it manually from the Actions tab.
+- **Credentials:** `PRACTICE_API_TOKEN` comes from the repository's
+  encrypted **Secrets**. `PRACTICE_API_URL` (`https://practice.fhsucyber.com`)
+  and `INSTRUCTOR_ID` (`7`) come from the repository's (non-encrypted)
+  **Variables**. None of these values are stored in this repo's code.
 - **Steps:** check out the repo, set up Python, install
   `requirements.txt`, run `collect_posts.py`, then run `checkin_bot.py`.
 - **Saving results:** the workflow stages `artifact/`, commits it only if
   something actually changed, and pushes the commit back to the repo - so
   `artifact/collected.json` and `artifact/files/` in this repo always
   reflect the most recent run.
+
+### Running it manually from GitHub Actions
+
+You don't have to wait for the daily schedule to test a change:
+
+1. Go to this repository on GitHub and open the **Actions** tab.
+2. In the left sidebar, click **Scheduled Check-In Bot**.
+3. Click the **Run workflow** dropdown button, confirm the branch is
+   `main`, and click the green **Run workflow** button.
+4. Refresh the page to see the new run appear, and click into it to watch
+   the logs for `collect_posts.py` and `checkin_bot.py` as they execute.
+
+This works because the workflow is triggered by `workflow_dispatch`, not
+just the cron `schedule`.
 
 ## What's in `artifact/`
 
@@ -167,6 +188,13 @@ What I personally tested and reviewed:
   accepting Claude's first suggested approach.
 - I reviewed the generated code and asked follow-up questions about parts I
   wanted explained before running them.
+
+- In a later session, I asked Claude to review the whole project against
+  the assignment's checklist and fix what didn't match: the workflow's
+  cron was firing every 15 minutes instead of once daily at `0 14 * * *`,
+  and `PRACTICE_API_URL` was wired up as a Secret instead of a Variable.
+  It also aligned the 423 log message's wording and updated this README.
+  I reviewed the diff for each file before approving it.
 
 *(This section is a draft based on our conversation - please adjust it if it
 doesn't match your own experience before submitting.)*

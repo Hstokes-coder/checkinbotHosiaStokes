@@ -103,7 +103,7 @@ def main():
         response = client.create_comment(post_id, REPLY_BODY)
 
         if response.status_code == 423:
-            print(f"[locked] Post {post_id} ({title!r}) - reply window closed")
+            print(f"Check-in closed, skipping (post {post_id}: {title!r})")
             continue
 
         response.raise_for_status()
