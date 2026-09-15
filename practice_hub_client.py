@@ -17,6 +17,8 @@ Task-specific logic lives in other files such as collect_posts.py.
 """
 
 import os
+from urllib.parse import urljoin
+
 import requests
 
 
@@ -224,10 +226,18 @@ class PracticeHubClient:
 
     def download_attachment(self, download_url):
         """
-        Download an attachment using its full download URL.
+        Download an attachment using its download URL.
+
+        The API sometimes returns a full URL (e.g.
+        "https://practice.fhsucyber.com/api/v1/attachments/2") and
+        sometimes a relative path (e.g. "/api/v1/attachments/2").
+        urljoin resolves a relative path against self.base_url; a
+        download_url that's already absolute is returned unchanged.
         """
+        url = urljoin(self.base_url.rstrip("/") + "/", download_url)
+
         response = requests.get(
-            download_url,
+            url,
             headers=self.headers
         )
 
